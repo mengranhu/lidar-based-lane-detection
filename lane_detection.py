@@ -5,6 +5,7 @@ import open3d as o3d
 import numpy as np
 import time
 from hough_transform import conic_hough
+from distribution_lateral_position import road_width_update
 
 
 def point_grid(radius):
@@ -40,7 +41,7 @@ def update(vis):
     num, dim = next_xyz.shape
     if num == 0:
         exit()
-    print("abcdefg", pcd)
+    # print("abcdefg", pcd)
     x_max, y_max, z_max = np.max(next_xyz, axis=0)
     x_min, y_min, z_min = np.min(next_xyz, axis=0)
 
@@ -72,7 +73,7 @@ def update(vis):
     # measurement detected by last step parameter space
     measurement_left = conic_hough(mea_left_lane, 10, 10, 10,
                                    left_offset - 0.3, left_offset + 0.3,
-                                  left_yaw - 0.5, left_yaw + 0.5,
+                                   left_yaw - 0.5, left_yaw + 0.5,
                                    left_curvature_ratio - 0.005,
                                    left_curvature_ratio + 0.005)
     # pcd1 = o3d.geometry.PointCloud()
@@ -147,6 +148,8 @@ if __name__ == "__main__":
     global right_offset, right_yaw, right_curvature, right_curvature_ratio
     global PCD_static, PCD_dynamic, Line_set, XYZ, KEY, IMG, pcs_path, pcd_idx
 
+    mark_resolution = 0.1
+
     vis = o3d.visualization.VisualizerWithKeyCallback()
     vis.create_window("Lane Detection", 800, 800)
     view = vis.get_view_control()
@@ -171,8 +174,11 @@ if __name__ == "__main__":
     right_lane = []
 
     # State Space Mat Initialization
-    P = np.eye(4)
-    # print("P:", P)
+    P = np.array([[10, 0, 0, 0],
+                  [0, 10, 0, 0],
+                  [0, 0, 1, 0],
+                  [0, 0, 0, 1]])
+    print("P:", P)
 
     Q = np.eye(4)
     # print("Q:", Q)
@@ -212,21 +218,27 @@ if __name__ == "__main__":
                                                         -2.5, 0,
                                                         -1.0, 1.0,
                                                         -0.01, 0.01)
-    # pcd = o3d.geometry.PointCloud()
-    # pcd.points = o3d.utility.Vector3dVector(left_lane)
-    # o3d.io.write_point_cloud(str(pcd_idx) + "_left_mark.pcd", pcd)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(left_lane)
+    o3d.io.write_point_cloud(str(pcd_idx) + "_left_mark.pcd", pcd)
 
     right_offset, right_yaw, right_curvature = conic_hough(right_lane, 50, 100, 20,
                                                            0, 2.5,
                                                            -1.0, 1.0,
                                                            -0.01, 0.01)
-    # pcd1 = o3d.geometry.PointCloud()
-    # pcd1.points = o3d.utility.Vector3dVector(right_lane)
-    # o3d.io.write_point_cloud(str(pcd_idx) + "_right_mark.pcd", pcd1)
-    # print("0.pcd -> [left offset]:", left_offset, "[right offset]:", right_offset)
+    pcd1 = o3d.geometry.PointCloud()
+    pcd1.points = o3d.utility.Vector3dVector(right_lane)
+    o3d.io.write_point_cloud(str(pcd_idx) + "_right_mark.pcd", pcd1)
+    print("0.pcd -> [left offset]:", left_offset, "[right offset]:", right_offset)
 
     left_curvature_ratio = 0
     right_curvature_ratio = 0
+
+    ego_yaw = (left_yaw + right_yaw) / 2
+    ego_curvature = (left_yaw + right_curvature) / 2
+    ego_curvature_ratio = (left_curvature_ratio + right_curvature_ratio) / 2
+    lane_width = road_width_update(xyz_init, mark_resolution,
+                                   ego_yaw, ego_curvature, ego_curvature_ratio)
 
     # generate first frame lane
     lane_point_cloud = []
@@ -234,12 +246,14 @@ if __name__ == "__main__":
     x_min, y_min, z_min = np.min(xyz_init, axis=0)
 
     for z in range(int(z_min), int(z_max), 1):
-        y1 = left_offset + left_yaw * z + 0.5 * left_curvature * z * z + left_curvature_ratio * z * z * z / 6
+        y1 = left_offset + left_yaw * z + 0.5 * left_curvature * z * z \
+             + left_curvature_ratio * z * z * z / 6
         lane_point_cloud.append(float(0))
         lane_point_cloud.append(float(y1))
         lane_point_cloud.append(float(z))
 
-        y2 = right_offset + right_yaw * z + 0.5 * right_curvature * z * z + right_curvature_ratio * z * z * z / 6
+        y2 = right_offset + right_yaw * z + 0.5 * right_curvature * z * z \
+             + right_curvature_ratio * z * z * z / 6
         lane_point_cloud.append(float(0))
         lane_point_cloud.append(float(y2))
         lane_point_cloud.append(float(z))
