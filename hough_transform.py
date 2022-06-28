@@ -1,6 +1,8 @@
 import numpy as np
 import open3d as o3d
 
+from lane_save import lane_save
+
 
 def get_key(employee):
     return employee[3]
@@ -25,7 +27,7 @@ def conic_hough(xyz, offset_dim, yaw_dim, curvature_dim,
             for i_curvature in range(curvature_dim):
                 curvature = min_curvature + curvature_step * i_curvature
                 # print("i_curvature:", i_curvature, "curvature:", curvature)
-                offset = (i_y - i_z * yaw - i_z * i_z * curvature)
+                offset = (i_y - i_z * yaw - 0.5 * i_z * i_z * curvature)
                 if offset > max_offset:
                     continue
                 elif offset < min_offset:
@@ -48,16 +50,19 @@ def conic_hough(xyz, offset_dim, yaw_dim, curvature_dim,
     vote_idx_list.sort(key=get_key, reverse=True)
     opt_offset_idx, opt_yaw_idx, opt_curvature_idx, opt_votes = vote_idx_list[0]
 
-    # print("offset idx", opt_offset_idx)
-    # print("yaw idx", opt_yaw_idx)
-    # print("cur idx", opt_curvature_idx)
-    # print("max vote:", opt_votes)
-
     opt_offset = min_offset + opt_offset_idx * offset_step
     opt_yaw = min_yaw + opt_yaw_idx * yaw_step
     opt_curvature = min_curvature + opt_curvature_idx * curvature_step
 
-    print("opt_offset: ", opt_offset)
-    print("opt_yaw: ", opt_yaw)
-    print("opt_curvature: ", opt_curvature)
     return opt_offset, opt_yaw, opt_curvature
+
+
+if __name__ == "__main__":
+    # conic_hough()
+    pcd_name = "0_left_mark"
+    pcd = o3d.io.read_point_cloud(pcd_name + ".pcd", format='pcd')
+    xyz = np.asarray(pcd.points)
+    offset, yaw, curvature = conic_hough(xyz, 400, 1000, 100, -4, 4, -5, 5, -0.005, 0.005)
+    print("offset:", offset, "yaw:", yaw, "curvature:", curvature)
+
+    lane_save(xyz, offset, yaw, curvature, 0, pcd_name)
