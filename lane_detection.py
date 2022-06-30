@@ -65,31 +65,47 @@ def update(vis):
 
             if abs(next_pt_y - next_des_y_right) < lane_width / 4:
                 mea_right_lane.append(x_y_z)
-            if next_pt_z >z_max:
+            if next_pt_z > z_max:
                 z_max = next_pt_z
 
-            if pcd_idx == 38:
-                if next_pt_z > 30:
-                    print(next_pt_x, next_pt_y, next_pt_z)
+            # if pcd_idx == 38:
+            #     if next_pt_z > 30:
+            #         print(next_pt_x, next_pt_y, next_pt_z)
 
     # measurement detected by last step parameter space
-    measurement_left = conic_hough(mea_left_lane, 10, 10, 10,
-                                   left_offset - 0.3, left_offset + 0.3,
-                                   left_yaw - 0.5, left_yaw + 0.5,
-                                   left_curvature_ratio - 0.005,
-                                   left_curvature_ratio + 0.005)
+    # left_lane_positive, left_offset, left_yaw, left_curvature
+    # measurement_left
+    left_lane_positive, left_offset, left_yaw, left_curvature = conic_hough(mea_left_lane, 10, 20, 50,
+                                                                            left_offset - 0.3, left_offset + 0.3,
+                                                                            left_yaw - 0.5, left_yaw + 0.5,
+                                                                            left_curvature - 0.002,
+                                                                            left_curvature + 0.002)
+    measurement_left = left_offset, left_yaw, left_curvature
     pcd1 = o3d.geometry.PointCloud()
     pcd1.points = o3d.utility.Vector3dVector(mea_left_lane)
     o3d.io.write_point_cloud(str(pcd_idx) + "_left_mark.pcd", pcd1)
 
-    measurement_right = conic_hough(mea_right_lane, 10, 10, 10,
-                                    right_offset - 0.3, right_offset + 0.3,
-                                    right_yaw - 0.5, right_yaw + 0.5,
-                                    right_curvature_ratio - 0.05,
-                                    right_curvature_ratio + 0.05)
+    # left_lane_positive, left_offset, left_yaw, left_curvature
+    # measurement_right
+    right_lane_positive, right_offset, right_yaw, right_curvature = conic_hough(mea_right_lane, 10, 20, 50,
+                                                                                right_offset - 0.3, right_offset + 0.3,
+                                                                                right_yaw - 0.5, right_yaw + 0.5,
+                                                                                left_curvature - 0.002,
+                                                                                left_curvature + 0.002)
+    measurement_right = right_offset, right_yaw, right_curvature
     pcd2 = o3d.geometry.PointCloud()
     pcd2.points = o3d.utility.Vector3dVector(mea_right_lane)
     o3d.io.write_point_cloud(str(pcd_idx) + "_right_mark.pcd", pcd2)
+
+    print("[frame " + str(pcd_idx) + "] mea left offset: ", left_offset)
+    print("[frame " + str(pcd_idx) + "] mea left yaw: ", left_yaw)
+    print("[frame " + str(pcd_idx) + "] mea left curvature: ", left_curvature)
+    print("[frame " + str(pcd_idx) + "] mea left curvature ratio: ", left_curvature_ratio)
+
+    print("[frame " + str(pcd_idx) + "] mea right offset: ", right_offset)
+    print("[frame " + str(pcd_idx) + "] mea right yaw: ", right_yaw)
+    print("[frame " + str(pcd_idx) + "] mea right curvature: ", right_curvature)
+    print("[frame " + str(pcd_idx) + "] mea right curvature ratio: ", right_curvature_ratio, " \n")
 
     mea_left_error = measurement_left - np.dot(H, state_left)
     mea_right_error = measurement_right - np.dot(H, state_right)
@@ -125,16 +141,19 @@ def update(vis):
 
     # plot lane
     lane_fitting = []
-    for z in range(0, int(z_max), 1):
-        y1 = left_offset + left_yaw * z + 0.5 * left_curvature * z * z + left_curvature_ratio * z * z * z / 6
-        lane_fitting.append(float(0))
-        lane_fitting.append(float(y1))
-        lane_fitting.append(float(z))
+    if left_lane_positive:
+        for z in range(0, int(z_max), 1):
+            y1 = left_offset + left_yaw * z + 0.5 * left_curvature * z * z + left_curvature_ratio * z * z * z / 6
+            lane_fitting.append(float(0))
+            lane_fitting.append(float(y1))
+            lane_fitting.append(float(z))
 
-        y2 = right_offset + right_yaw * z + 0.5 * right_curvature * z * z + right_curvature_ratio * z * z * z / 6
-        lane_fitting.append(float(0))
-        lane_fitting.append(float(y2))
-        lane_fitting.append(float(z))
+    if right_lane_positive:
+        for z in range(0, int(z_max), 1):
+            y2 = right_offset + right_yaw * z + 0.5 * right_curvature * z * z + right_curvature_ratio * z * z * z / 6
+            lane_fitting.append(float(0))
+            lane_fitting.append(float(y2))
+            lane_fitting.append(float(z))
 
     lane_fitting_np = np.asarray(lane_fitting).reshape(-1, 3)
     mark_fitting_cloud = np.vstack((next_xyz, lane_fitting_np))
@@ -187,12 +206,12 @@ if __name__ == "__main__":
 
     lane_width = 3.5
     left_offset = -lane_width / 2
-    left_yaw = 0
-    left_curvature = 0
+    left_yaw = 0.02
+    left_curvature = 0.0035
 
     right_offset = lane_width / 2
-    right_yaw = 0
-    right_curvature = 0
+    right_yaw = 0.02
+    right_curvature = 0.0035
 
     left_lane = []
     right_lane = []
@@ -201,7 +220,7 @@ if __name__ == "__main__":
     P = np.array([[10, 0, 0, 0],
                   [0, 5, 0, 0],
                   [0, 0, 1, 0],
-                  [0, 0, 0, 0.1]])
+                  [0, 0, 0, 0.001]])
     # print("P:", P)
 
     Q = np.eye(4)
@@ -222,13 +241,14 @@ if __name__ == "__main__":
                     [0, 0, 1, dz],
                     [0, 0, 0, 1]])
 
-    pcd_idx = 0
-    pcs_path = "./data/out_pcd/"
+    pcd_idx = 1
+    pcs_path = "./data/mark2/"
     pcd_name = pcs_path + str(pcd_idx) + ".pcd"
     pcd = o3d.io.read_point_cloud(pcd_name, format='pcd')
     xyz_init = np.asarray(pcd.points)
 
-    # First Update About Width
+    # First Width Update
+    print("frame " + str(pcd_idx) + " update lane width:")
     update_width = road_width_update(xyz_init, mark_resolution, 0, 0, 0)
     if update_width != 0:
         lane_width = update_width
@@ -238,36 +258,36 @@ if __name__ == "__main__":
     z_max = 0
     for i, xyz in enumerate(xyz_init):
         point_x, point_y, point_z = xyz
-        if point_z > 0:
+        if 0 < point_z < 50:
             des_y_left = left_offset + left_yaw * point_z + 0.5 * left_curvature * point_z * point_z
             des_y_right = right_offset + right_yaw * point_z + 0.5 * right_curvature * point_z * point_z
-            print("[", des_y_left, " ", des_y_right, " ", point_z, " ", point_y, "]")
-            if abs(des_y_left - point_y) < 2 * lane_width / 3:
+            # print("[", des_y_left, " ", des_y_right, " ", point_z, " ", point_y, "]")
+            if abs(des_y_left - point_y) < lane_width / 3:
                 left_lane.append(xyz)
                 # print(""point_z, " ", point_y)
 
-            if abs(point_y - des_y_right) < 2 * lane_width / 3:
+            if abs(point_y - des_y_right) < lane_width / 3:
                 right_lane.append(xyz)
-                print("[", point_z, " ", point_y, "]")
+                # print("[", point_z, " ", point_y, "]")
             if point_z > z_max:
                 z_max = point_z
 
     # initial mark distribution line -1
-    straight_line_save(z_max, lane_width, -1)
+    straight_line_save(z_max, lane_width, -1, left_yaw, left_curvature)
 
-    left_offset, left_yaw, left_curvature = conic_hough(left_lane, 50, 100, 40,
-                                                        -2.5, 0,
-                                                        -1.0, 1.0,
-                                                        -0.002, 0.002)
+    left_lane_positive, left_offset, left_yaw, left_curvature = conic_hough(left_lane, 25, 20, 100,
+                                                                            -2.5, 0,
+                                                                            -1.0, 1.0,
+                                                                            -0.006, 0.006)
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(left_lane)
     o3d.io.write_point_cloud(str(pcd_idx) + "_left_mark.pcd", pcd)
 
-    right_offset, right_yaw, right_curvature = conic_hough(right_lane, 50, 100, 40,
-                                                           0, 2.5,
-                                                           -1.0, 1.0,
-                                                           -0.002, 0.002)
+    right_lane_positive, right_offset, right_yaw, right_curvature = conic_hough(right_lane, 25, 20, 100,
+                                                                                0, 2.5,
+                                                                                -1.0, 1.0,
+                                                                                -0.006, 0.006)
     pcd1 = o3d.geometry.PointCloud()
     pcd1.points = o3d.utility.Vector3dVector(right_lane)
     o3d.io.write_point_cloud(str(pcd_idx) + "_right_mark.pcd", pcd1)
@@ -276,16 +296,16 @@ if __name__ == "__main__":
     right_curvature_ratio = 0
 
     print("\n")
-    print("[frame 0] opt left offset: ", left_offset)
-    print("[frame 0] opt left yaw: ", left_yaw)
-    print("[frame 0] opt left curvature: ", left_curvature)
-    print("[frame 0] opt left curvature ratio: ", left_curvature_ratio)
+    print("[frame " + str(pcd_idx) + "] opt left offset: ", left_offset)
+    print("[frame " + str(pcd_idx) + "] opt left yaw: ", left_yaw)
+    print("[frame " + str(pcd_idx) + "] opt left curvature: ", left_curvature)
+    print("[frame " + str(pcd_idx) + "] opt left curvature ratio: ", left_curvature_ratio)
 
-    print("[frame 0] opt right offset: ", right_offset)
-    print("[frame 0] opt right yaw: ", right_yaw)
-    print("[frame 0] opt right curvature: ", right_curvature)
-    print("[frame 0] opt right curvature ratio: ", right_curvature_ratio)
-    print("[frame 0] width by offsets: ", right_offset - left_offset, " \n")
+    print("[frame " + str(pcd_idx) + "] opt right offset: ", right_offset)
+    print("[frame " + str(pcd_idx) + "] opt right yaw: ", right_yaw)
+    print("[frame " + str(pcd_idx) + "] opt right curvature: ", right_curvature)
+    print("[frame " + str(pcd_idx) + "] opt right curvature ratio: ", right_curvature_ratio)
+    print("[frame " + str(pcd_idx) + "] width by offsets: ", right_offset - left_offset, " \n")
 
     # update road width
     ego_yaw = (left_yaw + right_yaw) / 2
@@ -319,7 +339,6 @@ if __name__ == "__main__":
     pcd2 = o3d.geometry.PointCloud()
     pcd2.points = o3d.utility.Vector3dVector(lane_point_cloud_np)
     o3d.io.write_point_cloud(str(pcd_idx) + "_lane.pcd", pcd2)
-    print(str(pcd_idx) + ".pcd -> [left offset]:", left_offset, "[right offset]:", right_offset)
 
     Line_set = point_grid(30)
     PCD_static = o3d.geometry.PointCloud()

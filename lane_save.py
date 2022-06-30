@@ -2,16 +2,16 @@ import open3d as o3d
 import numpy as np
 
 
-def straight_line_save(z_max, width, idx):
+def straight_line_save(z_max, width, idx, yaw, curvature):
     # initial mark distribution line -1
     ini_lane_point_cloud = []
     for z in range(0, int(z_max), 1):
-        y1 = -width/2
+        y1 = -width/2 + yaw * z + 0.5 * curvature * z * z
         ini_lane_point_cloud.append(float(0))
         ini_lane_point_cloud.append(float(y1))
         ini_lane_point_cloud.append(float(z))
 
-        y2 = width/2
+        y2 = width/2 + yaw * z + 0.5 * curvature * z * z
         ini_lane_point_cloud.append(float(0))
         ini_lane_point_cloud.append(float(y2))
         ini_lane_point_cloud.append(float(z))
@@ -41,4 +41,4 @@ def lane_save(xyz, offset, yaw, curvature, idx, pcd_name):
     # save lane line
     pcd2 = o3d.geometry.PointCloud()
     pcd2.points = o3d.utility.Vector3dVector(lane_point_cloud_np)
-    o3d.io.write_point_cloud(pcd_name + "_lane.pcd", pcd2)
+    o3d.io.write_point_cloud(pcd_name + "_" + str(idx) + "_lane.pcd", pcd2)

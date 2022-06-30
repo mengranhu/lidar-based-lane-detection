@@ -8,7 +8,7 @@ def get_coefficient(employee):
 def road_width_update(xyz_cluster, mark_resolution, ego_yaw, ego_curvature, ego_curvature_ratio):
     # Distribution of the relative lateral position
     mark_resolution_dim = int(4.8 / mark_resolution + 1)
-    print("mark_resolution_dim: ", mark_resolution_dim)
+    # print("mark_resolution_dim: ", mark_resolution_dim)
     distribution_space = np.zeros(mark_resolution_dim)
     for i, xyz in enumerate(xyz_cluster):
         point_x, point_y, point_z = xyz
