@@ -35,6 +35,9 @@ class Lane:
         xyz_list.sort(key=get_key)
         xyz_np = np.asarray(xyz_list)
 
+    def update_mark(self, mark_xyz):
+        self.mark_xyz = mark_xyz
+
 
 if __name__ == "__main__":
     pcd_name = "lane_mark"
