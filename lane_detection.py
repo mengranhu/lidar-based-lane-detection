@@ -6,7 +6,7 @@ import numpy as np
 import time
 from hough_transform import conic_hough
 from distribution_lateral_position import road_width_update
-from lane_save import straight_line_save
+from lane_save import lines_save
 
 
 def point_grid(radius):
@@ -73,8 +73,6 @@ def update(vis):
             #         print(next_pt_x, next_pt_y, next_pt_z)
 
     # measurement detected by last step parameter space
-    # left_lane_positive, left_offset, left_yaw, left_curvature
-    # measurement_left
     left_lane_positive, left_offset, left_yaw, left_curvature = conic_hough(mea_left_lane, 10, 20, 50,
                                                                             left_offset - 0.3, left_offset + 0.3,
                                                                             left_yaw - 0.5, left_yaw + 0.5,
@@ -176,14 +174,14 @@ def update(vis):
     vis.update_renderer()
 
 
-def Key_up(vis):
-    view = vis.get_view_control()
-    view.translate(10, 10, 0, 0)
-
-
-def Key_down(vis):
-    view = vis.get_view_control()
-    view.translate(10, 10, 0, 0)
+# def Key_up(vis):
+#     view = vis.get_view_control()
+#     view.translate(10, 10, 0, 0)
+#
+#
+# def Key_down(vis):
+#     view = vis.get_view_control()
+#     view.translate(10, 10, 0, 0)
 
 
 if __name__ == "__main__":
@@ -273,7 +271,7 @@ if __name__ == "__main__":
                 z_max = point_z
 
     # initial mark distribution line -1
-    straight_line_save(z_max, lane_width, -1, left_yaw, left_curvature)
+    lines_save(z_max, lane_width, -1, left_yaw, left_curvature)
 
     left_lane_positive, left_offset, left_yaw, left_curvature = conic_hough(left_lane, 25, 20, 100,
                                                                             -2.5, 0,

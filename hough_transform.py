@@ -108,9 +108,10 @@ def conic_hough_multi_line(xyz, offset_dim, yaw_dim, curvature_dim,
     opt_yaw_list = []
     opt_curvature_list = []
 
-    for i in range(4):
-        opt_offset_idx, opt_yaw_idx, opt_curvature_idx, opt_votes = vote_idx_list[i]
-        print("vote_idx_list:[" + str(i) + "]:", vote_idx_list[i])
+    for index in range(len(vote_idx_list)):
+        if len(opt_offset_list) >= 8:
+            break
+        opt_offset_idx, opt_yaw_idx, opt_curvature_idx, opt_votes = vote_idx_list[index]
         if opt_votes < 2:
             # flag_positive = False
             opt_offset = 0
@@ -121,22 +122,25 @@ def conic_hough_multi_line(xyz, offset_dim, yaw_dim, curvature_dim,
             opt_offset = min_offset + opt_offset_idx * offset_step
             opt_yaw = min_yaw + opt_yaw_idx * yaw_step
             opt_curvature = min_curvature + opt_curvature_idx * curvature_step
-            print("line ", i, " -> hough votes:", opt_offset, opt_yaw, opt_curvature, opt_votes)
-            opt_offset_list.append(opt_offset)
-            opt_yaw_list.append(opt_yaw)
-            opt_curvature_list.append(opt_curvature)
+            # 2 for lane width
+            if all(abs(item - opt_offset) > 2 for item in opt_offset_list):
+                print("line ", index, " -> hough votes:", opt_offset, opt_yaw, opt_curvature, opt_votes)
+                opt_offset_list.append(opt_offset)
+                opt_yaw_list.append(opt_yaw)
+                opt_curvature_list.append(opt_curvature)
+            else:
+                continue
 
-    return opt_offset, opt_yaw, opt_curvature
+    print("1829493248948-02350-:-----------:", len(opt_offset_list))
+    return opt_offset_list, opt_yaw_list, opt_curvature_list
 
 
 if __name__ == "__main__":
-    # conic_hough()
-    pcd_name = "lane"
+    pcd_name = "100"
     pcd = o3d.io.read_point_cloud(pcd_name + ".pcd", format='pcd')
     # o3d.visualization.draw_geometries([pcd])
     xyz = np.asarray(pcd.points)
-    # offset, yaw, curvature = conic_hough(xyz, 50, 100, 400, -4, 4, -3, 3, -0.002, 0.002)
-    offset_list, yaw_list, curvature_list = conic_hough_multi_line(xyz, 50, 100, 400, -4, 4, -3, 3, -0.002, 0.002)
+    offset_list, yaw_list, curvature_list = conic_hough_multi_line(xyz, 80, 60, 40, -4, 4, -3, 3, -0.002, 0.002)
     print("offset:", offset_list, "yaw:", yaw_list, "curvature:", curvature_list)
 
     for i in range(len(offset_list)):
