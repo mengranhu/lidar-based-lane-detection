@@ -109,7 +109,7 @@ def conic_hough_multi_line(xyz, offset_dim, yaw_dim, curvature_dim,
     opt_curvature_list = []
 
     for index in range(len(vote_idx_list)):
-        if len(opt_offset_list) >= 8:
+        if len(opt_offset_list) >= 15:
             break
         opt_offset_idx, opt_yaw_idx, opt_curvature_idx, opt_votes = vote_idx_list[index]
         if opt_votes < 2:
@@ -136,11 +136,11 @@ def conic_hough_multi_line(xyz, offset_dim, yaw_dim, curvature_dim,
 
 
 if __name__ == "__main__":
-    pcd_name = "100"
+    pcd_name = "../data_set/hough_test/115"
     pcd = o3d.io.read_point_cloud(pcd_name + ".pcd", format='pcd')
     # o3d.visualization.draw_geometries([pcd])
     xyz = np.asarray(pcd.points)
-    offset_list, yaw_list, curvature_list = conic_hough_multi_line(xyz, 80, 60, 40, -4, 4, -3, 3, -0.002, 0.002)
+    offset_list, yaw_list, curvature_list = conic_hough_multi_line(xyz, 40, 10, 20, -10, 10, -0.5, 0.5, -0.002, 0.002)
     print("offset:", offset_list, "yaw:", yaw_list, "curvature:", curvature_list)
 
     for i in range(len(offset_list)):
