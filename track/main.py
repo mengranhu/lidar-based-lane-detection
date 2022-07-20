@@ -179,7 +179,7 @@ if __name__ == '__main__':
         file_name = "frame_" + str(frame_idx) + "_cluster_" + str(idx) + ".pcd"
         o3d.io.write_point_cloud(file_name, clusters_cloud)
         cluster_xyz = np.asarray(clusters_cloud.points)
-        cluster = Cluster(frame_idx, cluster_xyz)
+        cluster = Cluster(frame_idx, idx, cluster_xyz)
         cluster.init()
         cluster_list.append(cluster)
 
@@ -213,7 +213,7 @@ if __name__ == '__main__':
 
                     if abs(des_near_y - pt_near_y) < 1.0 and abs(des_far_y - pt_far_y) < 1.0:
                         lane.add_xyz(cluster.cluster_xyz)
-                        print("[now] cluster idx: ", idx, " [last] lane idx:", lane.cluster_id)
+                        print("[now] cluster idx: ", cluster.cluster_id, " [last] lane idx:", lane.cluster_id)
                         continue
 
     # # for debug
@@ -223,14 +223,17 @@ if __name__ == '__main__':
     #         lane.pcd_save()
     #         lane.line_save()
 
+    print("1111111111111111111111111111111111111111")
     # Polyfit 、Update [confidence] & Delete
     for lane_idx, lane in enumerate(Lanes):
-        lane.update()
+        print(" lane_idx: ", lane_idx)
+        lane.state_update()
 
     Lane_tmp = []
     Lane_output = []
     for lane_idx, lane in enumerate(Lanes):
-        if lane.confidence > 20:
+        if lane.confidence > 0.2:
+            print("confidence > 0.2, ", lane_idx)
             Lane_tmp.append(lane)
             if len(lane.para) > 0:
                 z = np.linspace(lane.scope[2], lane.scope[3], 100)
@@ -241,7 +244,7 @@ if __name__ == '__main__':
                 line = np.hstack((20 * np.ones((y2.shape[-1], 1)), y2[:, np.newaxis]))
                 line = np.hstack((line, z[:, np.newaxis]))
                 LaneMark_np = np.vstack((LaneMark_np, line))
-        if lane.confidence > 90:
+        if lane.confidence > 0.9:
             Lane_output.append(lane)
     Lanes = Lane_tmp
 

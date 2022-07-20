@@ -4,8 +4,9 @@ from enum import Enum
 
 
 class Cluster:
-    def __init__(self, frame_idx, cluster_xyz):
+    def __init__(self, frame_idx, cluster_id, cluster_xyz):
         self.frame_idx = frame_idx
+        self.cluster_id = cluster_id
         self.cluster_xyz = cluster_xyz
         self.len = len(cluster_xyz)
         self.min_y = float("inf")
@@ -141,14 +142,22 @@ class Lane:
         offset, yaw, C0, C1 = state_predict
         self.para = [C1/6.0, C0/2.0, yaw, offset]
         self.P_Mat = self.A_Mat * self.P_Mat * self.A_Mat.transpose() + self.Q_Mat
+        print("step 1、shape self.now_xyz[:, 2]:", self.now_xyz[:, 2].shape)
         y_update = self.para[0] * self.now_xyz[:, 2] ** 3 + self.para[1] * self.now_xyz[:, 2] ** 2
         + self.para[2] * self.now_xyz[:, 2] + self.para[3]
-        xy_update = np.hstack((self.now_xyz[:, 0], y_update))
-        self.next_xyz = np.hstack(xy_update, self.now_xyz[:, 2])
+        print("step 2、shape y_update:", y_update.shape)
+        xy_update = np.vstack((self.now_xyz[:, 0], y_update))
+        print("step 3、shape xy_update:", xy_update.shape)
+        self.next_xyz = np.vstack((xy_update, self.now_xyz[:, 2])).transpose()
+        print("step 4、update over, shape next xyz:", self.next_xyz.shape)
 
-    def update(self):
+    def state_update(self):
+        print("222222222222222222222222222222222222222")
         if self.update:
+            print("2-----------------------------------1")
+            print("before self.next_xyz shape:", self.next_xyz.shape)
             slice_list = self.update_next_scope()
+            print("after self.next_xyz shape:", self.next_xyz.shape)
             dealt_arc_len, anchor_list = self.update_next_arc_len(slice_list)
             self.update_next_para(anchor_list)
             self.confidence = self.confidence + 0.1 + dealt_arc_len / 20
@@ -156,8 +165,11 @@ class Lane:
                 self.confidence = 1.0
 
         else:
+            print("2-----------------------------------2")
             # state、next_xyz & para update
+            print("before self.next_xyz shape:", self.next_xyz.shape, " self.next_xyz:", self.next_xyz)
             self.predict()
+            print("after self.next_xyz shape:", self.next_xyz.shape)
             slice_list = self.update_next_scope()
             self.update_next_arc_len(slice_list)
             # self.update_next_para(anchor_list)
